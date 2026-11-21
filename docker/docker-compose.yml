@@ -1,0 +1,78 @@
+services:
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    restart: unless-stopped
+    volumes:
+      - ./adguard/work:/opt/adguardhome/work
+      - ./adguard/conf:/opt/adguardhome/conf
+    networks:
+      vpn_net:
+        ipv4_address: 172.20.0.2
+
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+      - SERVERURL=auto
+      - SERVERPORT=51820
+      - PEERS=telephone,tablette,pc
+      - PEERDNS=172.20.0.2
+      - ALLOWEDIPS=0.0.0.0/0
+    volumes:
+      - ./wireguard/config:/config
+      - /lib/modules:/lib/modules:ro
+    ports:
+      - "51820:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+    depends_on:
+      - adguardhome
+    networks:
+      vpn_net:
+        ipv4_address: 172.20.0.3
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    networks:
+      vpn_net:
+        ipv4_address: 172.20.0.4
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      vpn_net:
+        ipv4_address: 172.20.0.5
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      vpn_net:
+        ipv4_address: 172.20.0.6
+
+volumes:
+  grafana_data:
+
+networks:
+  vpn_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24

@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'vm-vpn-node'
+    static_configs:
+      - targets: ['172.20.0.4:9100']
